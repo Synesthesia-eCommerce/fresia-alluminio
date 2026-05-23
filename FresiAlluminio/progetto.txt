@@ -1,0 +1,237 @@
+Fresia / Global 45 – Aggiornamento richiesta cliente e chiarimento obiettivi businessAggiornamento emerso dal confronto con il cliente
+Dopo l’analisi del materiale ricevuto e dei feedback successivi, emerge che il cliente non identifica un singolo obiettivo prioritario, ma vede il progetto come una piattaforma progressivamente evolutiva capace di coprire contemporaneamente più esigenze operative e commerciali.
+Le finalità percepite dal cliente risultano quindi cumulative e non alternative.
+Obiettivi Business identificati
+Il progetto viene percepito dal cliente come potenziale soluzione per:
+1. Supporto tecnico
+Permettere a:
+• venditori
+• clienti
+• serramentisti
+• personale interno
+di ottenere rapidamente risposte tecniche corrette basate sui cataloghi ufficiali e sugli aggiornamenti tecnici.
+2. Supporto alla vendita
+L’assistente potrebbe:
+• guidare il cliente nella scelta
+• suggerire componenti compatibili
+• facilitare la comprensione delle gamme
+• aiutare il commerciale nella consulenza
+Con possibile impatto sulla qualità della relazione commerciale.
+3. Riduzione errori
+Uno dei problemi impliciti emersi è la possibilità di:
+• dimenticare aggiornamenti tecnici
+• utilizzare componenti incompatibili
+• configurare in modo errato alcuni elementi
+L’idea del cliente è che il sistema possa “vincolare” le scelte successive riducendo errori umani e dipendenza dalla memoria del singolo operatore.
+4. Velocizzazione della preventivazione/configurazione
+Anche se non ancora formalizzato in modo completo, emerge chiaramente il desiderio di:
+• velocizzare la costruzione delle configurazioni
+• ridurre i tempi di consultazione catalogo
+• semplificare la scelta dei componenti
+• automatizzare parte del processo configurativo
+Questo potrebbe evolvere in futuro verso:
+• distinte materiali
+• supporto preventivazione
+• CPQ semplificato
+5. Trasferimento del know-how
+Tema molto forte emerso indirettamente durante tutta la conversazione.
+Oggi molta della conoscenza:
+• è nelle persone
+• è legata all’esperienza
+• non è completamente formalizzata
+L’assistente AI viene percepito anche come:
+• strumento di conservazione della conoscenza tecnica
+• supporto a utenti meno esperti
+• acceleratore onboarding
+• mitigazione del rischio legato alla perdita di know-how
+Output desiderati
+Il cliente, ad oggi, considera interessanti tutti gli output discussi durante la riunione.
+Quindi il sistema potrebbe progressivamente evolvere fino a gestire:
+• consultazione intelligente catalogo
+• guida conversazionale (opzionale)
+• suggerimento componenti
+• verifica compatibilità
+• supporto configurazione
+• riepilogo componenti scelti
+• generazione elenco materiali
+• gestione quantità
+• eventuale esportazione
+• eventuale invio email
+• potenziale generazione ordine/configurazione finale
+Importante:
+non è ancora stato definito quale debba essere il primo output operativo prioritario dell’MVP.
+Questo punto andrà probabilmente validato in discovery.
+Dominio iniziale richiesto
+Il cliente vorrebbe partire esclusivamente dal:
+“Global 45”
+Questo è positivo perché:
+• riduce complessità iniziale
+• permette verticalizzazione
+• rende gestibile un MVP
+• consente di validare rapidamente il modello logico
+Il catalogo Global 45 sembra avere caratteristiche adatte a un primo prototipo perché:
+• è molto strutturato
+• ha logiche coerenti
+• contiene relazioni tra componenti
+• presenta già un flusso mentale abbastanza definito per il serramentista
+Considerazione importante
+Secondo me il cliente sta cercando due cose contemporaneamente:
+1. Validazione interna
+Lara e Cristina sembrano voler costruire un MVP/demo abbastanza concreto da mostrare al CEO (Valentino) per:
+• rendere tangibile il valore
+• ottenere sponsorship interna
+• dimostrare il potenziale innovativo
+2. Validazione tecnica
+Capire se:
+• il catalogo è modellabile
+• il know-how è traducibile in logiche AI
+• il sistema può davvero guidare le configurazioni
+• l’esperienza utente può risultare utile ai serramentisti
+Valutazione del portale cataloghi 
+ https://www.fresialluminio.com/servizi/serramentisti/elenco-cataloghi.html
+
+Il punto importante non è solo il numero dei cataloghi (circa 30) , ma il fatto che Fresia abbia già costruito negli anni un ecosistema documentale molto strutturato e segmentato per tipologia utente.
+Dalla struttura del sito emergono infatti:
+• cataloghi tecnici
+ • brochure commerciali
+ • certificazioni termiche/acustiche/antieffrazione
+ • DWG
+ • BIM
+ • listini
+ • aggiornamenti tecnici
+ • Termosoftware
+ • aree dedicate per serramentisti, progettisti, agenti e privati
+Questo conferma che il problema reale NON è “digitalizzare dei PDF”.
+Il problema reale è:
+organizzare e orchestrare un patrimonio tecnico-documentale enorme e frammentato
+E questo è molto interessante lato AI.
+Lettura strategica importante per il team
+Secondo me il progetto va separato mentalmente in:
+1. Layer documentale
+Quello che già esiste:
+ • PDF
+ • cataloghi
+ • aggiornamenti
+ • certificati
+ • DWG
+ • BIM
+ • schede
+ • listini
+Questa parte è già digitalizzata.
+2. Layer logico
+Quello che oggi vive:
+ • nella testa dei tecnici
+ • nell’esperienza dei serramentisti
+ • nelle relazioni tra componenti
+ • nella sequenza mentale di consultazione catalogo
+Questo è il vero asset da modellare.
+Cosa emerge osservando il portale Fresia
+Il sito mostra già una struttura estremamente coerente con un futuro sistema AI.
+Per esempio:
+Area serramentisti
+Contiene:
+ • cataloghi
+ • aggiornamenti tecnici
+ • certificazioni
+ • listini
+ • DWG
+ • Termosoftware
+Questa non è una semplice area download.
+È già una knowledge base non strutturata.
+Area progettisti
+Presenza di:
+ • BIM
+ • progettazione
+ • DWG
+ • supporti tecnici
+Questo apre scenari futuri molto più grandi:
+ • AI per progettisti
+ • AI su BIM
+ • configurazione tecnica avanzata
+ • supporto architetti
+Il punto chiave che cambia la valutazione economica
+Il cliente oggi sta parlando del Global 45.
+Ma la struttura Fresia suggerisce che se il primo MVP funziona, il progetto potrebbe diventare:
+il layer intelligente di tutta la piattaforma tecnica Fresia
+Per questo bisogna stare molto attenti ora:
+ • architettura
+ • scalabilità
+ • modello dati
+ • approccio ingestion
+ • tassonomie
+ • knowledge graph
+ • RAG
+ • orchestrazione
+Perché potrebbe crescere molto rapidamente.
+Insight molto importante
+Il fatto che:
+ • i cataloghi siano pubblici
+ • scaricabili
+ • già organizzati
+ • standardizzati
+ • divisi per categorie
+è un enorme vantaggio per partire velocemente.
+Perché consente di:
+ • fare analisi preliminare immediata
+ • costruire demo
+ • fare ingestion test
+ • testare parsing
+ • verificare qualità OCR
+ • verificare struttura logica
+senza ancora coinvolgere pesantemente il cliente.
+Però attenzione: il PDF NON contiene tutta la logica
+Questo è il punto più importante da spiegare internamente.
+Per esempio nel Global 45 emergono:
+ • profili
+ • accessori
+ • nodi
+ • lavorazioni
+ • distinte
+ • meccanismi
+ • istruzioni di montaggio
+Ma NON contiene sempre:
+ • regole decisionali
+ • esclusioni
+ • dipendenze implicite
+ • eccezioni pratiche
+ • “come ragiona il tecnico”
+Quella parte va estratta tramite workshop.
+La vera opportunità
+Secondo me qui ci sono in realtà TRE progetti futuri possibili.
+1. AI Knowledge Assistant
+Ricerca tecnica e consultazione.
+2. Guided Configuration Assistant
+Guida progressiva e configurazione.
+3. Fresia Technical Ecosystem AI
+Layer AI unico sopra:
+ • cataloghi
+ • BIM
+ • DWG
+ • certificati
+ • listini
+ • ordini
+ • Termosoftware
+E qui il progetto diventerebbe molto importante.
+Cosa suggerirei ora internamente
+Secondo me sarebbe utile NON stimare subito:
+ “quanto costa fare il sistema completo”.
+Ma stimare:
+“quanto costa validare il modello”
+Con un MVP che faccia:
+• ingestion reale Global 45
+ • parsing contenuti
+ • modellazione base relazioni
+ • flow guidato
+ • esperienza conversazionale
+ • output finale semplice
+ • demo navigabile
+Perché il vero obiettivo adesso sembra essere:
+far fare il click a Valentino
+E sinceramente dalla trascrizione si capisce molto bene che:
+ • Lara e Cristina credono nel progetto
+ • ma hanno bisogno di qualcosa di concreto da mostrare internamente
+ • e probabilmente di qualcosa che sembri “magico” già al primo impatto
+Quindi lato UX il progetto sarà fondamentale quasi quanto lato AI.
+la parte importante
+più che per la matrice di compatibilità, far vedere che c'è la possiblità che una volta che abbiamo l'info possiamo costruire il flusso
+quindi dai piu importanza alla possiblità di fare il flusso che alla correttezza del flusso
