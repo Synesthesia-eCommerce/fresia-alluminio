@@ -168,8 +168,6 @@ function SelectField({
     if (open) {
       const t = setTimeout(() => searchRef.current?.focus(), 0)
       return () => clearTimeout(t)
-    } else {
-      setSearch('')
     }
   }, [open])
 
@@ -260,7 +258,7 @@ function SelectField({
             {filtered.length === 0 ? (
               <div className="px-4 py-7 text-center">
                 <div className="text-[13px] text-slate-400">
-                  Nessun risultato per <span className="font-semibold text-slate-600">"{search}"</span>
+                  Nessun risultato per <span className="font-semibold text-slate-600">&ldquo;{search}&rdquo;</span>
                 </div>
                 <button
                   type="button"
@@ -716,10 +714,10 @@ function ConfiguratorePage({ initialTipo, hasPreselect }: { initialTipo: TipoCon
       meta: extra ?? (p.peso_gr_m ? `${p.peso_gr_m} g/m` : undefined),
     }))
 
-  const numero = useMemo(() => {
+  const [numero] = useState(() => {
     const d = new Date()
     return `G45-${d.getFullYear().toString().slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(Math.floor(Math.random() * 999) + 1).padStart(3, '0')}`
-  }, [])
+  })
 
   const [copied, setCopied] = useState(false)
 
