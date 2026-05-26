@@ -1,4 +1,11 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# macOS
+.DS_Store
+
+# Cataloghi PDF (file binari pesanti — tenere fuori da git)
+*.pdf
+
+# Configurazione agenti AI locale
+.claude/
 
 # dependencies
 /node_modules
@@ -21,7 +28,6 @@
 /build
 
 # misc
-.DS_Store
 *.pem
 
 # debug
