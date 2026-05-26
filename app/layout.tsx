@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import Link from 'next/link'
 import './globals.css'
-import catalogoData from '@/data/catalogo-global45.json'
+import catalogoData from '@/FresiAlluminio/catalogo-global45.json'
 
 const inter = Inter({
   variable: '--font-sans',

@@ -1,4 +1,4 @@
-import catalogoRaw from '@/data/catalogo-global45.json'
+import catalogoRaw from '@/FresiAlluminio/catalogo-global45.json'
 import type { Profilo, Accessorio, MeccanismoOrientabile, Guarnizione } from './types'
 
 const catalogo = catalogoRaw as typeof catalogoRaw
