@@ -1,245 +1,101 @@
-import {
-  getTelai,
-  getAnte,
-  getOvaline,
-  getFasceZoccoli,
-  getRiportiCentrali,
-  getProfiliMeccanismi,
-  getProfiliScorrimento,
-  getSportellini,
-  getAltriProfili,
-  getAllAccessori,
-  getMeccanismoPerla70,
-  getMeccanismoVenere,
-} from '@/lib/catalogo'
-import type { Profilo, Accessorio } from '@/lib/types'
 import Link from 'next/link'
+import catalogoData from '@/FresiAlluminio/catalogo-global45.json'
+import { ACCENT, NAVY } from '@/lib/tokens'
 
-function ProfiloTable({ profili }: { profili: Profilo[] }) {
-  if (profili.length === 0) return <p className="text-sm" style={{ color: 'var(--brand-text-muted)' }}>Nessun profilo</p>
-  return (
-    <div className="overflow-x-auto rounded-xl border" style={{ borderColor: 'var(--brand-border)' }}>
-      <table className="w-full text-sm">
-        <thead>
-          <tr style={{ backgroundColor: 'var(--brand-bg)' }}>
-            <th className="text-left px-4 py-2.5 font-semibold border-b" style={{ color: 'var(--brand-text-muted)', borderColor: 'var(--brand-border)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Codice</th>
-            <th className="text-left px-4 py-2.5 font-semibold border-b hidden md:table-cell" style={{ color: 'var(--brand-text-muted)', borderColor: 'var(--brand-border)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Descrizione</th>
-            <th className="text-right px-4 py-2.5 font-semibold border-b" style={{ color: 'var(--brand-text-muted)', borderColor: 'var(--brand-border)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>g/m</th>
-            <th className="text-right px-4 py-2.5 font-semibold border-b hidden sm:table-cell" style={{ color: 'var(--brand-text-muted)', borderColor: 'var(--brand-border)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Barra</th>
-            <th className="text-left px-4 py-2.5 font-semibold border-b hidden sm:table-cell" style={{ color: 'var(--brand-text-muted)', borderColor: 'var(--brand-border)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Cava</th>
-          </tr>
-        </thead>
-        <tbody>
-          {profili.map((p, i) => (
-            <tr
-              key={p.codice}
-              style={{ backgroundColor: i % 2 === 0 ? '#fff' : 'var(--brand-bg)', borderTop: i > 0 ? '1px solid var(--brand-border)' : undefined }}
-            >
-              <td className="px-4 py-2.5">
-                <span className="font-mono font-bold text-sm" style={{ color: 'var(--brand-primary)' }}>{p.codice}</span>
-              </td>
-              <td className="px-4 py-2.5 hidden md:table-cell text-sm" style={{ color: 'var(--brand-text)' }}>{p.descrizione}</td>
-              <td className="px-4 py-2.5 text-right font-mono text-sm" style={{ color: 'var(--brand-text)' }}>{p.peso_gr_m ?? '—'}</td>
-              <td className="px-4 py-2.5 text-right font-mono text-sm hidden sm:table-cell" style={{ color: 'var(--brand-text-muted)' }}>
-                {p.lunghezza_barra_mm ? `${(p.lunghezza_barra_mm / 1000).toFixed(1)} m` : '—'}
-              </td>
-              <td className="px-4 py-2.5 hidden sm:table-cell">
-                {p.cava && (
-                  <span
-                    className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                    style={{ backgroundColor: 'rgba(27,58,107,0.08)', color: 'var(--brand-primary)' }}
-                  >
-                    {p.cava}
-                  </span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
+export const metadata = {
+  title: 'Catalogo Global 45 — Fresia Alluminio',
 }
 
-function AccessorioTable({ accessori }: { accessori: Accessorio[] }) {
-  return (
-    <div className="overflow-x-auto rounded-xl border" style={{ borderColor: 'var(--brand-border)' }}>
-      <table className="w-full text-sm">
-        <thead>
-          <tr style={{ backgroundColor: 'var(--brand-bg)' }}>
-            <th className="text-left px-4 py-2.5 font-semibold border-b" style={{ color: 'var(--brand-text-muted)', borderColor: 'var(--brand-border)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Codice</th>
-            <th className="text-left px-4 py-2.5 font-semibold border-b hidden md:table-cell" style={{ color: 'var(--brand-text-muted)', borderColor: 'var(--brand-border)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Descrizione</th>
-            <th className="text-left px-4 py-2.5 font-semibold border-b hidden sm:table-cell" style={{ color: 'var(--brand-text-muted)', borderColor: 'var(--brand-border)', fontSize: '0.75rem', textTransform: 'uppercase' }}>UdV</th>
-          </tr>
-        </thead>
-        <tbody>
-          {accessori.map((a, i) => (
-            <tr
-              key={a.codice}
-              style={{ backgroundColor: i % 2 === 0 ? '#fff' : 'var(--brand-bg)', borderTop: i > 0 ? '1px solid var(--brand-border)' : undefined }}
-            >
-              <td className="px-4 py-2.5">
-                <span className="font-mono font-bold text-sm" style={{ color: 'var(--brand-primary)' }}>{a.codice}</span>
-              </td>
-              <td className="px-4 py-2.5 hidden md:table-cell text-sm" style={{ color: 'var(--brand-text)' }}>{a.descrizione}</td>
-              <td className="px-4 py-2.5 hidden sm:table-cell text-xs" style={{ color: 'var(--brand-text-muted)' }}>{a.udv ?? '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
+const LABELS: Record<string, string> = {
+  telai: 'Telai',
+  ante: 'Ante',
+  riporti_centrali: 'Riporti centrali',
+  fasce_zoccoli: 'Fasce e zoccoli',
+  profili_meccanismi: 'Profili meccanismi',
 }
 
-function Section({ titolo, count, children }: { titolo: string; count: number; children: React.ReactNode }) {
-  return (
-    <section className="bg-white rounded-2xl border p-6" style={{ borderColor: 'var(--brand-border)' }}>
-      <div className="flex items-center gap-3 mb-5">
-        <h2 className="text-lg font-bold" style={{ color: 'var(--brand-primary)' }}>{titolo}</h2>
-        <span
-          className="text-xs font-bold px-2 py-0.5 rounded-full"
-          style={{ backgroundColor: 'rgba(27,58,107,0.08)', color: 'var(--brand-primary)' }}
-        >
-          {count}
-        </span>
-      </div>
-      {children}
-    </section>
-  )
+type ProfiloRaw = {
+  codice: string
+  descrizione: string
+  peso_gr_m?: number
+  lunghezza_barra_mm: number
+  note?: string
+  cava?: string
 }
 
 export default function CatalogoPage() {
-  const telai = getTelai()
-  const ante = getAnte()
-  const ovaline = getOvaline()
-  const fasce = getFasceZoccoli()
-  const riporti = getRiportiCentrali()
-  const profiliMeccanismi = getProfiliMeccanismi()
-  const profiliScorrimento = getProfiliScorrimento()
-  const sportellini = getSportellini()
-  const altriProfili = getAltriProfili()
-  const accessori = getAllAccessori()
-  const perla70 = getMeccanismoPerla70()
-  const venere = getMeccanismoVenere()
+  const meta = catalogoData.meta
+  const g45 = (catalogoData.profili as Record<string, Record<string, ProfiloRaw[]>>).global45
+
+  const categories = Object.entries(g45)
 
   return (
-    <div style={{ backgroundColor: 'var(--brand-bg)', minHeight: '100vh' }}>
-      {/* Header */}
-      <div style={{ backgroundColor: 'var(--brand-primary)' }} className="py-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Catalogo Global 45</h1>
-          <p style={{ color: 'rgba(255,255,255,0.7)' }} className="text-sm">
-            Sistema Persiana Alsistem — tutti i profili, accessori e meccanismi
+    <div style={{ background: '#EEEEEE', minHeight: '100vh' }}>
+      <div className="bg-white border-b border-slate-200/80">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-8">
+          <div className="text-[10px] uppercase tracking-[0.18em] font-bold mb-2" style={{ color: ACCENT }}>
+            {meta.sistema} · {meta.produttore}
+          </div>
+          <h1 className="text-[28px] font-bold tracking-[-0.02em] text-slate-900 mb-1">
+            Catalogo tecnico profili
+          </h1>
+          <p className="text-[14px] text-slate-500">
+            Edizione {meta.edizione}
           </p>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-
-        {/* Quick stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { label: 'Telai', n: telai.length },
-            { label: 'Ante', n: ante.length },
-            { label: 'Ovaline', n: ovaline.length },
-            { label: 'Accessori', n: accessori.length },
-          ].map(s => (
-            <div
-              key={s.label}
-              className="bg-white rounded-xl border p-4 text-center"
-              style={{ borderColor: 'var(--brand-border)' }}
-            >
-              <div className="text-2xl font-bold" style={{ color: 'var(--brand-primary)' }}>{s.n}</div>
-              <div className="text-xs mt-1" style={{ color: 'var(--brand-text-muted)' }}>{s.label}</div>
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-10">
+        <div className="space-y-8">
+          {categories.map(([cat, items]) => (
+            <div key={cat}>
+              <h2 className="text-[11px] uppercase tracking-[0.16em] font-bold mb-3" style={{ color: NAVY }}>
+                {LABELS[cat] ?? cat}
+              </h2>
+              <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-[0_1px_0_rgba(0,0,0,0.02),0_4px_12px_rgba(0,0,0,0.03)]">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      <th className="text-left px-5 py-3 text-[11px] uppercase tracking-[0.1em] text-slate-400 font-semibold">Codice</th>
+                      <th className="text-left px-5 py-3 text-[11px] uppercase tracking-[0.1em] text-slate-400 font-semibold">Descrizione</th>
+                      <th className="text-right px-5 py-3 text-[11px] uppercase tracking-[0.1em] text-slate-400 font-semibold">kg/m</th>
+                      <th className="text-right px-5 py-3 text-[11px] uppercase tracking-[0.1em] text-slate-400 font-semibold">Barra (mm)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((p) => (
+                      <tr key={p.codice} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                        <td className="px-5 py-3 font-mono font-bold text-[13px]" style={{ color: ACCENT }}>
+                          {p.codice}
+                        </td>
+                        <td className="px-5 py-3 text-slate-700">
+                          {p.descrizione}
+                          {p.cava && <span className="ml-2 text-[11px] text-slate-400">cava: {p.cava}</span>}
+                        </td>
+                        <td className="px-5 py-3 text-right font-mono text-slate-600">
+                          {p.peso_gr_m != null ? (p.peso_gr_m / 1000).toFixed(3) : '—'}
+                        </td>
+                        <td className="px-5 py-3 text-right font-mono text-slate-600">
+                          {p.lunghezza_barra_mm.toLocaleString('it-IT')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ))}
         </div>
 
-        {/* CTA */}
-        <div
-          className="rounded-2xl p-5 flex items-center justify-between flex-wrap gap-4"
-          style={{ backgroundColor: 'rgba(232,96,14,0.06)', border: '1px solid rgba(232,96,14,0.2)' }}
-        >
-          <div>
-            <div className="font-bold" style={{ color: 'var(--brand-primary)' }}>Vuoi generare una distinta?</div>
-            <div className="text-sm" style={{ color: 'var(--brand-text-muted)' }}>Usa il configuratore per calcolare tagli, quantità e peso</div>
-          </div>
-          <Link href="/configuratore" className="btn-primary">
+        <div className="mt-10 flex justify-center">
+          <Link
+            href="/configuratore"
+            className="inline-flex items-center gap-2.5 px-6 py-3 rounded-lg font-semibold text-white text-[14px] transition hover:-translate-y-px"
+            style={{ background: ACCENT, boxShadow: '0 8px 24px rgba(167,0,0,0.20)' }}
+          >
             Avvia configurazione →
           </Link>
         </div>
-
-        <Section titolo="Telai" count={telai.length}><ProfiloTable profili={telai} /></Section>
-        <Section titolo="Ante" count={ante.length}><ProfiloTable profili={ante} /></Section>
-        <Section titolo="Ovaline" count={ovaline.length}><ProfiloTable profili={ovaline} /></Section>
-        <Section titolo="Fasce e Zoccoli" count={fasce.length}><ProfiloTable profili={fasce} /></Section>
-        <Section titolo="Riporti Centrali" count={riporti.length}><ProfiloTable profili={riporti} /></Section>
-
-        {profiliMeccanismi.length > 0 && (
-          <Section titolo="Profili Meccanismi" count={profiliMeccanismi.length}><ProfiloTable profili={profiliMeccanismi} /></Section>
-        )}
-        {profiliScorrimento.length > 0 && (
-          <Section titolo="Profili Scorrimento" count={profiliScorrimento.length}><ProfiloTable profili={profiliScorrimento} /></Section>
-        )}
-        {sportellini.length > 0 && (
-          <Section titolo="Sportellini" count={sportellini.length}><ProfiloTable profili={sportellini} /></Section>
-        )}
-        {altriProfili.length > 0 && (
-          <Section titolo="Altri Profili" count={altriProfili.length}><ProfiloTable profili={altriProfili} /></Section>
-        )}
-
-        <Section titolo="Accessori" count={accessori.length}><AccessorioTable accessori={accessori} /></Section>
-
-        {/* Meccanismi */}
-        <section className="bg-white rounded-2xl border p-6" style={{ borderColor: 'var(--brand-border)' }}>
-          <h2 className="text-lg font-bold mb-5" style={{ color: 'var(--brand-primary)' }}>Meccanismi Orientabili</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              { mec: perla70, nome: 'Perla 70' },
-              { mec: venere, nome: 'Venere' },
-            ].map(({ mec, nome }) => (
-              <div key={nome}>
-                <div className="font-semibold mb-1 text-sm" style={{ color: 'var(--brand-primary)' }}>{nome}</div>
-                <p className="text-xs mb-3" style={{ color: 'var(--brand-text-muted)' }}>{mec.descrizione}</p>
-                <div className="overflow-x-auto rounded-xl border" style={{ borderColor: 'var(--brand-border)' }}>
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr style={{ backgroundColor: 'var(--brand-bg)' }}>
-                        <th className="text-left px-3 py-2 border-b font-semibold uppercase tracking-wide" style={{ color: 'var(--brand-text-muted)', borderColor: 'var(--brand-border)' }}>Codice</th>
-                        <th className="text-right px-3 py-2 border-b font-semibold uppercase tracking-wide" style={{ color: 'var(--brand-text-muted)', borderColor: 'var(--brand-border)' }}>H max</th>
-                        <th className="text-right px-3 py-2 border-b font-semibold uppercase tracking-wide" style={{ color: 'var(--brand-text-muted)', borderColor: 'var(--brand-border)' }}>Lamelle</th>
-                        <th className="text-right px-3 py-2 border-b font-semibold uppercase tracking-wide" style={{ color: 'var(--brand-text-muted)', borderColor: 'var(--brand-border)' }}>Comando</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {mec.tabella_misure.map((v, i) => (
-                        <tr
-                          key={v.codice}
-                          style={{ backgroundColor: i % 2 === 0 ? '#fff' : 'var(--brand-bg)', borderTop: i > 0 ? '1px solid var(--brand-border)' : undefined }}
-                        >
-                          <td className="px-3 py-2 font-mono font-bold" style={{ color: 'var(--brand-primary)' }}>{v.codice}</td>
-                          <td className="px-3 py-2 text-right font-mono" style={{ color: 'var(--brand-text)' }}>{v.h_max_mm} mm</td>
-                          <td className="px-3 py-2 text-right" style={{ color: 'var(--brand-text)' }}>{v.num_lamelle}</td>
-                          <td className="px-3 py-2 text-right">
-                            <span
-                              className="px-1.5 py-0.5 rounded text-xs font-semibold"
-                              style={{
-                                backgroundColor: v.comando === 'doppio' ? 'rgba(232,96,14,0.1)' : 'rgba(27,58,107,0.08)',
-                                color: v.comando === 'doppio' ? 'var(--brand-accent)' : 'var(--brand-primary)',
-                              }}
-                            >
-                              {v.comando}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
     </div>
   )

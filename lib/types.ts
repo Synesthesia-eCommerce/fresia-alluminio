@@ -142,3 +142,20 @@ export interface SuggerimentoMeccanismo {
   comando: 'singolo' | 'doppio'
   tipo: 'perla_70' | 'venere'
 }
+
+// ─── App State (configuratore) ────────────────────────────────────────────────
+
+export interface AppState {
+  tipologia: TipoConfigurazione
+  profili: { telaio: string | null; anta: string | null; ovalina: string | null; fascia: string | null }
+  dimensioni: { larghezza: number; altezza: number; ante: number }
+  meccanismo: TipoMeccanismo
+  accessori: string[]
+}
+
+export interface ElementoSalvato {
+  id: string
+  nome: string
+  stato: AppState
+  bom: ListaMateriali
+}

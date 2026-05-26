@@ -1,7 +1,5 @@
 import Link from 'next/link'
-
-const ACCENT = '#E8600E'
-const NAVY = '#1B3A6B'
+import { ACCENT, NAVY } from '@/lib/tokens'
 
 export default function HomePage() {
   return (
@@ -41,7 +39,7 @@ export default function HomePage() {
             style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.14)' }}
           >
             <span className="w-1.5 h-1.5 rounded-full" style={{ background: ACCENT }} />
-            Sistema Persiana · Catalogo Alsistem
+            Sistema Persiana · Catalogo
           </div>
 
           <h1
@@ -61,19 +59,32 @@ export default function HomePage() {
             <Link
               href="/configuratore"
               className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-lg font-semibold text-white text-[14px] transition-all hover:-translate-y-px"
-              style={{ background: ACCENT, boxShadow: '0 8px 24px rgba(232,96,14,0.4)' }}
+              style={{ background: ACCENT, boxShadow: '0 8px 24px rgba(167,0,0,0.25)' }}
             >
               Avvia configurazione
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="transition-transform group-hover:translate-x-0.5">
                 <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </Link>
+            <a
+              href="/catalogo-global45.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-lg font-semibold text-white/85 text-[14px] transition hover:bg-white/8"
+              style={{ border: '1px solid rgba(255,255,255,0.2)' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                <polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Sfoglia catalogo
+            </a>
             <Link
               href="/catalogo"
               className="inline-flex items-center gap-2 px-5 py-3 rounded-lg font-semibold text-white/85 text-[14px] transition hover:bg-white/8"
               style={{ border: '1px solid rgba(255,255,255,0.2)' }}
             >
-              Sfoglia catalogo
+              Catalogo tecnico profili
             </Link>
           </div>
 
@@ -95,7 +106,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Features ─────────────────────────────────────────────────── */}
-      <section className="py-12 lg:py-16" style={{ background: '#F4F6F9' }}>
+      <section className="py-12 lg:py-16" style={{ background: '#EEEEEE' }}>
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
           <div className="flex items-end justify-between gap-4 mb-8 flex-wrap">
             <div>
@@ -137,12 +148,12 @@ export default function HomePage() {
               <div
                 key={f.n}
                 className="group bg-white rounded-2xl p-6 transition-all duration-200 hover:-translate-y-0.5"
-                style={{ border: '1px solid #E5E9F0', boxShadow: '0 1px 3px rgba(27,58,107,0.06)' }}
+                style={{ border: '1px solid #E3E3E3', boxShadow: '0 1px 3px rgba(27,58,107,0.06)' }}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div
                     className="w-12 h-12 rounded-xl flex items-center justify-center"
-                    style={{ background: '#F4F6F9', color: NAVY }}
+                    style={{ background: '#EEEEEE', color: NAVY }}
                   >
                     {f.icon}
                   </div>
@@ -174,11 +185,11 @@ export default function HomePage() {
                 key={t.slug}
                 href={`/configuratore?tipo=${t.slug}`}
                 className="group rounded-xl border p-4 transition-all hover:-translate-y-px hover:shadow-md"
-                style={{ borderColor: '#E5E9F0', background: '#FAFBFD' }}
+                style={{ borderColor: '#E3E3E3', background: '#FAFBFD' }}
               >
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm mb-3 transition-colors"
-                  style={{ background: 'rgba(27,58,107,0.07)', color: NAVY }}
+                  style={{ background: 'rgba(51,51,51,0.07)', color: NAVY }}
                 >
                   {t.label.charAt(0)}
                 </div>
@@ -202,7 +213,7 @@ export default function HomePage() {
           <Link
             href="/configuratore"
             className="inline-flex items-center gap-2.5 px-7 py-3 rounded-lg font-semibold text-white text-[14px] transition hover:-translate-y-px"
-            style={{ background: ACCENT, boxShadow: '0 8px 24px rgba(232,96,14,0.4)' }}
+            style={{ background: ACCENT, boxShadow: '0 8px 24px rgba(167,0,0,0.25)' }}
           >
             Inizia ora →
           </Link>

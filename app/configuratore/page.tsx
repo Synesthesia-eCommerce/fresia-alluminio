@@ -1,28 +1,24 @@
 'use client'
 
 import { useState, useMemo, useRef, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { createPortal } from 'react-dom'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { ACCENT, NAVY } from '@/lib/tokens'
 import { getTelai, getAnte, getOvaline, getFasceZoccoli, getRiportiCentrali } from '@/lib/catalogo'
-import type { Profilo, TipoConfigurazione, TipoMeccanismo } from '@/lib/types'
+import type { Profilo, TipoConfigurazione, TipoMeccanismo, AppState } from '@/lib/types'
 import {
   generaListaMateriali,
   validaConfigurazione,
   suggerisciMeccanismo,
   calcolaNumOvalinePreview,
 } from '@/lib/engine'
-
-const ACCENT = '#E8600E'
-const NAVY = '#1B3A6B'
+import {
+  leggiElementi,
+  aggiungiElemento,
+  aggiornaElemento,
+} from '@/lib/elementi-store'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-interface AppState {
-  tipologia: TipoConfigurazione
-  profili: { telaio: string | null; anta: string | null; ovalina: string | null; fascia: string | null }
-  dimensioni: { larghezza: number; altezza: number; ante: number }
-  meccanismo: TipoMeccanismo
-  accessori: string[]
-}
 
 const DEFAULT_STATE: AppState = {
   tipologia: 'con_telaio',
@@ -78,7 +74,7 @@ const MECCANISMI = [
   { id: 'venere' as TipoMeccanismo, name: 'Venere', desc: 'Meccanismo silenzioso con asta interna' },
 ]
 
-const STEPS = ['Tipologia', 'Profili', 'Dimensioni', 'Accessori', 'Lista materiali']
+const STEPS = ['Tipologia', 'Profili', 'Dimensioni', 'Accessori']
 
 // ─── Small UI primitives ──────────────────────────────────────────────────────
 
@@ -96,8 +92,8 @@ function Btn({
   const base = 'inline-flex items-center gap-2 px-5 py-3 text-sm font-semibold rounded-md transition-all duration-200 select-none'
   const styles =
     kind === 'primary'
-      ? { background: ACCENT, color: '#fff', boxShadow: '0 1px 0 rgba(0,0,0,0.05), 0 8px 24px rgba(232,96,14,0.28)' }
-      : { background: 'transparent', color: '#475569', border: '1px solid #E5E9F0' }
+      ? { background: ACCENT, color: '#fff', boxShadow: '0 1px 0 rgba(0,0,0,0.05), 0 8px 24px rgba(167,0,0,0.22)' }
+      : { background: 'transparent', color: '#475569', border: '1px solid #E3E3E3' }
   return (
     <button
       type="button"
@@ -150,24 +146,39 @@ function SelectField({
 }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const ref = useRef<HTMLDivElement>(null)
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({})
+  const containerRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
-        setSearch('')
-      }
+      const t = e.target as Node
+      if (containerRef.current?.contains(t) || menuRef.current?.contains(t)) return
+      setOpen(false)
+      setSearch('')
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  const updatePos = () => {
+    if (!triggerRef.current) return
+    const rect = triggerRef.current.getBoundingClientRect()
+    setMenuStyle({ position: 'fixed', top: rect.bottom + 6, left: rect.left, width: rect.width })
+  }
+
   useEffect(() => {
-    if (open) {
-      const t = setTimeout(() => searchRef.current?.focus(), 0)
-      return () => clearTimeout(t)
+    if (!open) { setSearch(''); return }
+    updatePos()
+    const t = setTimeout(() => searchRef.current?.focus(), 10)
+    window.addEventListener('scroll', updatePos, true)
+    window.addEventListener('resize', updatePos)
+    return () => {
+      clearTimeout(t)
+      window.removeEventListener('scroll', updatePos, true)
+      window.removeEventListener('resize', updatePos)
     }
   }, [open])
 
@@ -185,20 +196,118 @@ function SelectField({
   const selected = options.find(o => o.value === value)
   const showSearch = options.length >= 5
 
+  const menu = open ? createPortal(
+    <div
+      ref={menuRef}
+      style={{
+        ...menuStyle,
+        zIndex: 9999,
+        background: '#fff',
+        border: '1px solid #E3E3E3',
+        borderRadius: '0.5rem',
+        overflow: 'hidden',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.14), 0 4px 16px rgba(0,0,0,0.08)',
+      }}
+      onKeyDown={e => e.key === 'Escape' && close()}
+    >
+      {showSearch && (
+        <div className="px-3 py-2.5 border-b border-slate-100">
+          <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="shrink-0 text-slate-400" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+              <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <input
+              ref={searchRef}
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Cerca codice o descrizione…"
+              className="flex-1 bg-transparent text-[13px] outline-none text-slate-700 placeholder:text-slate-400"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => { setSearch(''); searchRef.current?.focus() }}
+                className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
+                aria-label="Cancella ricerca"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      <div className="max-h-[272px] overflow-y-auto py-1">
+        {filtered.length === 0 ? (
+          <div className="px-4 py-7 text-center">
+            <div className="text-[13px] text-slate-400">
+              Nessun risultato per <span className="font-semibold text-slate-600">"{search}"</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setSearch(''); searchRef.current?.focus() }}
+              className="mt-2 text-[12px] font-semibold transition-colors"
+              style={{ color: ACCENT }}
+            >
+              Mostra tutti
+            </button>
+          </div>
+        ) : filtered.map(o => {
+          const active = o.value === value
+          return (
+            <button
+              key={o.value ?? '__null'}
+              type="button"
+              onClick={() => { onChange(o.value); close() }}
+              className="w-full text-left px-4 py-3 transition flex items-start gap-3"
+              style={{ background: active ? '#FFF5F5' : 'transparent' }}
+              onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#F8FAFC' }}
+              onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-bold text-slate-900 tabular-nums text-[13px]">{o.code}</span>
+                  <span className="text-slate-700 text-[14px] font-medium">{o.label}</span>
+                </div>
+                {o.desc && <div className="text-[12px] text-slate-500 mt-0.5 leading-snug">{o.desc}</div>}
+              </div>
+              {o.meta && <div className="text-[11px] text-slate-400 tabular-nums shrink-0 pt-0.5">{o.meta}</div>}
+              {active && (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0 mt-0.5">
+                  <path d="M5 12.5l4.5 4.5L19 7.5" stroke={ACCENT} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </button>
+          )
+        })}
+      </div>
+      {search && filtered.length > 0 && (
+        <div className="px-4 py-2 border-t border-slate-100 text-right text-[11px] text-slate-400">
+          {filtered.length} di {options.length} risultati
+        </div>
+      )}
+    </div>,
+    document.body
+  ) : null
+
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative" ref={containerRef}>
       <div className="flex items-baseline justify-between mb-2">
-        <label className="text-[12px] uppercase tracking-[0.14em] font-bold text-slate-500">{label}</label>
-        {helper && <span className="text-[11px] text-slate-400">{helper}</span>}
+        <label className="text-[12px] uppercase tracking-[0.14em] font-bold" style={{ color: '#666666' }}>{label}</label>
+        {helper && <span className="text-[11px]" style={{ color: '#999999' }}>{helper}</span>}
       </div>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => !locked && setOpen(v => !v)}
         className={'w-full flex items-center justify-between gap-3 rounded-lg px-4 bg-white text-left transition-all duration-200 ' + (locked ? 'opacity-60 cursor-not-allowed' : 'hover:border-slate-300')}
         style={{
-          border: open ? `2px solid ${ACCENT}` : '1.5px solid #E5E9F0',
+          border: open ? `2px solid ${ACCENT}` : '1.5px solid #E3E3E3',
           padding: open ? 'calc(0.875rem - 0.5px) calc(1rem - 0.5px)' : '0.875rem 1rem',
-          boxShadow: open ? '0 8px 24px rgba(232,96,14,0.10)' : 'none',
+          boxShadow: open ? `0 0 0 3px rgba(167,0,0,0.08)` : 'none',
         }}
       >
         <div className="min-w-0 flex-1">
@@ -209,103 +318,14 @@ function SelectField({
               <span className="text-slate-700 truncate text-[14px]">{selected.label}</span>
             </div>
           ) : (
-            <span className="text-slate-400 text-[14px]">{locked ? '—' : placeholder}</span>
+            <span className="text-[14px]" style={{ color: '#999999' }}>{locked ? '—' : placeholder}</span>
           )}
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className={'shrink-0 transition-transform ' + (open ? 'rotate-180' : '')}>
           <path d="M6 9l6 6 6-6" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
-
-      {open && (
-        <div
-          className="absolute z-50 left-0 right-0 mt-2 bg-white rounded-lg overflow-hidden"
-          style={{ border: '1px solid #E5E9F0', boxShadow: '0 24px 64px rgba(15,23,42,0.18), 0 4px 12px rgba(15,23,42,0.08)' }}
-          onKeyDown={e => e.key === 'Escape' && close()}
-        >
-          {showSearch && (
-            <div className="px-3 py-2.5 border-b border-slate-100">
-              <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="shrink-0 text-slate-400" aria-hidden="true">
-                  <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
-                  <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-                <input
-                  ref={searchRef}
-                  type="text"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Cerca codice o descrizione…"
-                  className="flex-1 bg-transparent text-[13px] outline-none text-slate-700 placeholder:text-slate-400"
-                />
-                {search && (
-                  <button
-                    type="button"
-                    onClick={() => { setSearch(''); searchRef.current?.focus() }}
-                    className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
-                    aria-label="Cancella ricerca"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="max-h-[272px] overflow-y-auto py-1">
-            {filtered.length === 0 ? (
-              <div className="px-4 py-7 text-center">
-                <div className="text-[13px] text-slate-400">
-                  Nessun risultato per <span className="font-semibold text-slate-600">&ldquo;{search}&rdquo;</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => { setSearch(''); searchRef.current?.focus() }}
-                  className="mt-2 text-[12px] font-semibold transition-colors"
-                  style={{ color: ACCENT }}
-                >
-                  Mostra tutti
-                </button>
-              </div>
-            ) : filtered.map(o => {
-              const active = o.value === value
-              return (
-                <button
-                  key={o.value ?? '__null'}
-                  type="button"
-                  onClick={() => { onChange(o.value); close() }}
-                  className="w-full text-left px-4 py-3 transition flex items-start gap-3"
-                  style={{ background: active ? '#FFF8F5' : 'transparent' }}
-                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#F8FAFC' }}
-                  onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-bold text-slate-900 tabular-nums text-[13px]">{o.code}</span>
-                      <span className="text-slate-700 text-[14px] font-medium">{o.label}</span>
-                    </div>
-                    {o.desc && <div className="text-[12px] text-slate-500 mt-0.5 leading-snug">{o.desc}</div>}
-                  </div>
-                  {o.meta && <div className="text-[11px] text-slate-400 tabular-nums shrink-0 pt-0.5">{o.meta}</div>}
-                  {active && (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0 mt-0.5">
-                      <path d="M5 12.5l4.5 4.5L19 7.5" stroke={ACCENT} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-
-          {search && filtered.length > 0 && (
-            <div className="px-4 py-2 border-t border-slate-100 text-right text-[11px] text-slate-400">
-              {filtered.length} di {options.length} risultati
-            </div>
-          )}
-        </div>
-      )}
+      {menu}
     </div>
   )
 }
@@ -327,9 +347,9 @@ function Stepper({ current, maxReached, onJump }: { current: number; maxReached:
               aria-disabled={locked}
               className="flex-1 flex items-center gap-3 rounded-md transition-all duration-200 px-3 sm:px-4 py-2.5 sm:py-3 text-left"
               style={{
-                background: active ? ACCENT : done ? NAVY : '#fff',
-                color: active || done ? '#fff' : locked ? '#C8D0DC' : '#475569',
-                border: active || done ? '1px solid transparent' : '1px solid #E5E9F0',
+                background: active ? ACCENT : done ? 'rgb(237 214 214)' : '#fff',
+                color: active ? '#fff' : done ? ACCENT : locked ? '#C8D0DC' : '#475569',
+                border: active ? '1px solid transparent' : done ? `1px solid rgb(220 180 180)` : '1px solid #E3E3E3',
                 cursor: locked ? 'not-allowed' : 'pointer',
                 opacity: locked ? 0.5 : 1,
               }}
@@ -337,8 +357,8 @@ function Stepper({ current, maxReached, onJump }: { current: number; maxReached:
               <div
                 className="shrink-0 flex items-center justify-center w-7 h-7 rounded text-[11px] font-bold tabular-nums"
                 style={{
-                  background: active || done ? 'rgba(255,255,255,0.18)' : '#F4F6F9',
-                  color: active || done ? '#fff' : '#94A3B8',
+                  background: active ? 'rgba(255,255,255,0.18)' : done ? 'rgba(167,0,0,0.12)' : '#EEEEEE',
+                  color: active ? '#fff' : done ? ACCENT : '#94A3B8',
                 }}
               >
                 {done ? (
@@ -354,7 +374,7 @@ function Stepper({ current, maxReached, onJump }: { current: number; maxReached:
                 <div className="text-sm font-semibold truncate">{s}</div>
               </div>
             </button>
-            {i < STEPS.length - 1 && <div className="hidden md:block w-3 h-px shrink-0" style={{ background: '#E5E9F0' }} />}
+            {i < STEPS.length - 1 && <div className="hidden md:block w-3 h-px shrink-0" style={{ background: '#E3E3E3' }} />}
           </div>
         )
       })}
@@ -369,7 +389,7 @@ function Sidebar({ state, bom }: { state: AppState; bom: ReturnType<typeof gener
 
   return (
     <aside className="hidden lg:block lg:w-[340px] shrink-0">
-      <div className="sticky top-[152px] bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_0_rgba(0,0,0,0.02),0_8px_24px_rgba(27,58,107,0.06)] overflow-hidden">
+      <div className="sticky top-[152px] bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_0_rgba(0,0,0,0.02),0_8px_24px_rgba(0,0,0,0.04)] overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100" style={{ background: 'linear-gradient(180deg,#FAFBFD 0%,#fff 100%)' }}>
           <div className="text-[10px] uppercase tracking-[0.16em] font-bold" style={{ color: ACCENT }}>Sistema Global 45</div>
           <div className="text-base font-semibold text-slate-900 mt-0.5">Riepilogo configurazione</div>
@@ -384,6 +404,7 @@ function Sidebar({ state, bom }: { state: AppState; bom: ReturnType<typeof gener
             { label: 'Fascia', value: state.profili.fascia, mono: true },
             { label: 'Dimensioni', value: state.dimensioni.larghezza && state.dimensioni.altezza ? `${state.dimensioni.larghezza} × ${state.dimensioni.altezza} mm` : null, mono: true },
             { label: 'Ante', value: `n. ${state.dimensioni.ante}`, mono: true },
+            { label: 'Peso stimato', value: bom ? `${bom.peso_totale_kg.toFixed(2)} kg` : null, mono: true },
           ].map(row => (
             <div key={row.label} className="flex items-baseline justify-between gap-3 py-2 border-b border-slate-100 last:border-0">
               <span className="text-[11px] uppercase tracking-[0.1em] text-slate-400 font-semibold">{row.label}</span>
@@ -394,25 +415,6 @@ function Sidebar({ state, bom }: { state: AppState; bom: ReturnType<typeof gener
           ))}
         </div>
 
-        <div className="px-5 py-4 border-t border-slate-100" style={{ background: '#FAFBFD' }}>
-          <div className="flex items-baseline justify-between">
-            <div className="text-[11px] uppercase tracking-[0.1em] text-slate-500 font-semibold">Peso stimato</div>
-            <div className="font-bold text-slate-900 tabular-nums" style={{ fontSize: 22 }}>
-              {bom ? bom.peso_totale_kg.toFixed(2) : '—'}{' '}
-              <span className="text-xs font-medium text-slate-500">kg</span>
-            </div>
-          </div>
-          <div className="mt-1 text-[11px] text-slate-400">Calcolo indicativo profili in alluminio.</div>
-        </div>
-
-        <div className="px-5 py-3 border-t border-slate-100 text-[11px] leading-relaxed text-slate-500">
-          I valori sono calcolati in tempo reale sulla base delle selezioni. La conferma definitiva avverrà nello step 5.
-        </div>
-      </div>
-
-      <div className="hidden lg:flex items-center gap-2 mt-3 px-2 text-[10px] uppercase tracking-[0.12em] text-slate-400 font-semibold">
-        <div className="w-1.5 h-1.5 rounded-full" style={{ background: ACCENT }} />
-        Configurazione live
       </div>
     </aside>
   )
@@ -433,7 +435,7 @@ function MobileSummaryBar({
   return (
     <div
       className="no-print lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200"
-      style={{ boxShadow: '0 -4px 20px rgba(27,58,107,0.08)' }}
+      style={{ boxShadow: '0 -4px 20px rgba(0,0,0,0.05)' }}
     >
       <div className="max-w-[1400px] mx-auto px-4 py-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -502,7 +504,7 @@ function ShutterPreview({ state }: { state: AppState }) {
     <div className="relative w-full h-full flex items-center justify-center">
       <svg
         viewBox={`0 0 ${VBW} ${VBH}`}
-        className="w-full h-auto max-h-[520px] drop-shadow-[0_20px_50px_rgba(27,58,107,0.18)]"
+        className="w-full h-auto max-h-[520px] drop-shadow-[0_20px_50px_rgba(0,0,0,0.10)]"
         style={{ maxWidth: VBW }}
       >
         {/* dimension labels */}
@@ -511,8 +513,8 @@ function ShutterPreview({ state }: { state: AppState }) {
           <text x={VBW / 2} y={9} textAnchor="middle">{W} mm</text>
         </g>
         <g fontFamily="Inter" fontSize="11" fill="#94A3B8" fontWeight="500">
-          <line x1={VBW - 10} y1={pad} x2={VBW - 10} y2={VBH - pad} stroke="#CBD5E1" strokeDasharray="2 3" />
-          <text x={VBW - 5} y={VBH / 2} transform={`rotate(90 ${VBW - 5} ${VBH / 2})`} textAnchor="middle">{H} mm</text>
+          <line x1={VBW - 16} y1={pad} x2={VBW - 16} y2={VBH - pad} stroke="#CBD5E1" strokeDasharray="2 3" />
+          <text x={VBW - 16} y={VBH / 2} transform={`rotate(90 ${VBW - 16} ${VBH / 2})`} textAnchor="middle">{H} mm</text>
         </g>
 
         {/* Telaio */}
@@ -601,17 +603,17 @@ function ShutterPreview({ state }: { state: AppState }) {
         })}
 
         {N > 1 && (
-          <g fontFamily="Inter" fontSize="9" fontWeight="600" fill={NAVY} opacity="0.4">
+          <g fontFamily="Inter" fontSize="8" fontWeight="700" fill={NAVY} opacity="0.45">
             {Array.from({ length: N }).map((_, i) => (
-              <text key={i} x={innerX + i * (antaW + gap) + antaW / 2} y={VBH - pad + 14} textAnchor="middle">
+              <text key={i} x={innerX + i * (antaW + gap) + antaW / 2} y={innerY + antaThick + 13} textAnchor="middle">
                 ANTA {i + 1}
               </text>
             ))}
           </g>
         )}
 
-        <g fontFamily="Inter" fontSize="9" fontWeight="600" fill="#94A3B8" letterSpacing="0.1em">
-          <text x={pad} y={VBH - 4}>GLOBAL 45 — ANTEPRIMA TECNICA</text>
+        <g fontFamily="Inter" fontSize="9" fontWeight="500" fill="#94A3B8" letterSpacing="0.08em">
+          <text x={pad} y={VBH - 5}>GLOBAL 45 — ANTEPRIMA TECNICA</text>
         </g>
       </svg>
     </div>
@@ -714,12 +716,57 @@ function ConfiguratorePage({ initialTipo, hasPreselect }: { initialTipo: TipoCon
       meta: extra ?? (p.peso_gr_m ? `${p.peso_gr_m} g/m` : undefined),
     }))
 
-  const [numero] = useState(() => {
+  const numero = useMemo(() => {
     const d = new Date()
     return `G45-${d.getFullYear().toString().slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(Math.floor(Math.random() * 999) + 1).padStart(3, '0')}`
-  })
+  }, [])
 
+  const router = useRouter()
+  const [nomeElemento, setNomeElemento] = useState('')
   const [copied, setCopied] = useState(false)
+  const [editId, setEditId] = useState<string | null>(null)
+
+  // ── Edit mode: pre-load element from localStorage on mount ──────────────────
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    const id = searchParams.get('edit')
+    if (!id) return
+    const el = leggiElementi().find(e => e.id === id)
+    if (!el) return
+    setEditId(id)
+    setNomeElemento(el.nome)
+    setState(el.stato)
+    setStep(1)
+    setMaxReached(4)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const isConfigComplete = useMemo(() => {
+    if (tipo?.needs.telaio && !state.profili.telaio) return false
+    if (!state.profili.anta) return false
+    if (!tipo?.needs.cieca && !state.profili.ovalina) return false
+    return (
+      state.dimensioni.larghezza >= 400 && state.dimensioni.larghezza <= 3500 &&
+      state.dimensioni.altezza >= 500 && state.dimensioni.altezza <= 3000
+    )
+  }, [state, tipo])
+
+  const salvaElemento = () => {
+    const conteggioAttuale = leggiElementi().length
+    const nome = nomeElemento.trim() || `Elemento ${conteggioAttuale + 1}`
+    if (editId) {
+      aggiornaElemento({ id: editId, nome, stato: { ...state }, bom })
+      setEditId(null)
+    } else {
+      aggiungiElemento({ id: `${Date.now()}`, nome, stato: { ...state }, bom })
+    }
+    setNomeElemento('')
+    setState({ ...DEFAULT_STATE })
+    setDirection('backward')
+    setStep(0)
+    setMaxReached(0)
+    router.push('/lista')
+  }
 
   const exportCSV = () => {
     const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`
@@ -778,29 +825,29 @@ function ConfiguratorePage({ initialTipo, hasPreselect }: { initialTipo: TipoCon
               return (
                 <button
                   key={t.id}
-                  onClick={() => { update({ tipologia: t.id }); setDirection('forward'); setStep(1); setMaxReached(r => Math.max(r, 1)) }}
+                  onClick={() => update({ tipologia: t.id })}
                   className={'relative w-full text-left rounded-2xl transition-all duration-200 overflow-hidden ' +
-                    (active ? '-translate-y-1 shadow-[0_20px_48px_rgba(232,96,14,0.22),0_4px_12px_rgba(27,58,107,0.08)]'
-                      : 'hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(27,58,107,0.12)] shadow-[0_1px_0_rgba(0,0,0,0.02),0_4px_12px_rgba(27,58,107,0.05)]')}
-                  style={{ background: active ? '#FFF8F5' : '#fff', border: active ? `2px solid ${ACCENT}` : '2px solid transparent' }}
+                    (active ? '-translate-y-1 shadow-[0_20px_48px_rgba(167,0,0,0.22),0_4px_12px_rgba(0,0,0,0.05)]'
+                      : 'hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(0,0,0,0.07)] shadow-[0_1px_0_rgba(0,0,0,0.02),0_4px_12px_rgba(0,0,0,0.03)]')}
+                  style={{ background: active ? '#FFF5F5' : '#fff', border: active ? `2px solid ${ACCENT}` : '2px solid transparent' }}
                 >
                   <div className="aspect-[4/3] flex items-center justify-center relative overflow-hidden"
                     style={{ background: active ? '#fff' : 'linear-gradient(135deg,#F8FAFC 0%,#EEF2F7 100%)' }}>
                     <TipologiaSvg id={t.id} />
                     <div className="absolute top-4 left-4 px-2.5 py-1 rounded text-[10px] uppercase tracking-[0.12em] font-bold"
-                      style={{ background: active ? ACCENT : '#fff', color: active ? '#fff' : NAVY, border: active ? '1px solid transparent' : '1px solid #E5E9F0' }}>
+                      style={{ background: active ? ACCENT : '#fff', color: active ? '#fff' : NAVY, border: active ? '1px solid transparent' : '1px solid #E3E3E3' }}>
                       {t.tag}
                     </div>
                     {active && (
                       <div className="absolute top-4 right-4 w-7 h-7 rounded-full flex items-center justify-center"
-                        style={{ background: ACCENT, boxShadow: '0 4px 12px rgba(232,96,14,0.3)' }}>
+                        style={{ background: ACCENT, boxShadow: '0 4px 12px rgba(167,0,0,0.25)' }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                           <path d="M5 12.5l4.5 4.5L19 7.5" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </div>
                     )}
                   </div>
-                  <div className="px-7 py-7" style={{ borderTop: active ? `1px solid ${ACCENT}33` : '1px solid #E5E9F0' }}>
+                  <div className="px-7 py-7" style={{ borderTop: active ? `1px solid ${ACCENT}33` : '1px solid #E3E3E3' }}>
                     <div className="font-bold text-slate-900 text-[22px] leading-tight tracking-[-0.01em]">{t.name}</div>
                     <div className="mt-3 text-[14px] leading-relaxed text-slate-500">{t.desc}</div>
                   </div>
@@ -822,12 +869,12 @@ function ConfiguratorePage({ initialTipo, hasPreselect }: { initialTipo: TipoCon
         ...toOpts(fasce),
       ]
 
-      const totalKgm = [
+      const totalGrm = [
         tipo.needs.telaio ? telai.find(p => p.codice === state.profili.telaio)?.peso_gr_m ?? 0 : 0,
         ante.find(p => p.codice === state.profili.anta)?.peso_gr_m ?? 0,
         ovaline.find(p => p.codice === state.profili.ovalina)?.peso_gr_m ?? 0,
         fasce.find(p => p.codice === state.profili.fascia)?.peso_gr_m ?? 0,
-      ].reduce((a, b) => a + b, 0) / 1000
+      ].reduce((a, b) => a + b, 0)
 
       return (
         <div>
@@ -855,7 +902,7 @@ function ConfiguratorePage({ initialTipo, hasPreselect }: { initialTipo: TipoCon
             </div>
 
             <div className="col-span-12 xl:col-span-5">
-              <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_8px_24px_rgba(27,58,107,0.06)] sticky top-[150px] overflow-hidden">
+              <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_8px_24px_rgba(0,0,0,0.04)] sticky top-[150px] overflow-hidden">
                 <div className="px-6 py-5 border-b border-slate-100" style={{ background: '#FAFBFD' }}>
                   <div className="text-[10px] uppercase tracking-[0.16em] font-bold" style={{ color: ACCENT }}>Componenti selezionati</div>
                   <div className="flex items-baseline justify-between mt-1">
@@ -894,7 +941,7 @@ function ConfiguratorePage({ initialTipo, hasPreselect }: { initialTipo: TipoCon
                 <div className="px-6 py-4 border-t border-slate-100 flex items-baseline justify-between" style={{ background: '#FAFBFD' }}>
                   <div className="text-[11px] uppercase tracking-[0.1em] font-bold text-slate-500">Peso lineare totale</div>
                   <div className="text-lg font-bold text-slate-900 tabular-nums">
-                    {totalKgm.toFixed(3)} <span className="text-xs font-medium text-slate-500">kg/m</span>
+                    {totalGrm} <span className="text-xs font-medium text-slate-500">g/m</span>
                   </div>
                 </div>
               </div>
@@ -927,10 +974,10 @@ function ConfiguratorePage({ initialTipo, hasPreselect }: { initialTipo: TipoCon
                     <button key={n} onClick={() => update({ dimensioni: { ...state.dimensioni, ante: n } })}
                       className="w-14 h-14 rounded-xl font-bold text-sm transition-all"
                       style={{
-                        border: state.dimensioni.ante === n ? `2px solid ${ACCENT}` : '2px solid #E5E9F0',
+                        border: state.dimensioni.ante === n ? `2px solid ${ACCENT}` : '2px solid #E3E3E3',
                         background: state.dimensioni.ante === n ? ACCENT : '#fff',
                         color: state.dimensioni.ante === n ? '#fff' : '#475569',
-                        boxShadow: state.dimensioni.ante === n ? '0 2px 8px rgba(232,96,14,0.3)' : 'none',
+                        boxShadow: state.dimensioni.ante === n ? '0 2px 8px rgba(167,0,0,0.25)' : 'none',
                       }}>
                       {n}
                     </button>
@@ -945,8 +992,8 @@ function ConfiguratorePage({ initialTipo, hasPreselect }: { initialTipo: TipoCon
                     <button key={m.id} onClick={() => update({ meccanismo: m.id })}
                       className="w-full flex items-center gap-4 rounded-xl px-4 py-3.5 text-left transition-all"
                       style={{
-                        background: state.meccanismo === m.id ? '#FFF8F5' : '#fff',
-                        border: state.meccanismo === m.id ? `1.5px solid ${ACCENT}` : '1.5px solid #E5E9F0',
+                        background: state.meccanismo === m.id ? '#FFF5F5' : '#fff',
+                        border: state.meccanismo === m.id ? `1.5px solid ${ACCENT}` : '1.5px solid #E3E3E3',
                       }}>
                       <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors"
                         style={{ borderColor: state.meccanismo === m.id ? ACCENT : '#CBD5E1' }}>
@@ -989,7 +1036,7 @@ function ConfiguratorePage({ initialTipo, hasPreselect }: { initialTipo: TipoCon
 
             {/* Preview */}
             <div className="col-span-12 xl:col-span-5">
-              <div className="sticky top-[150px] bg-white rounded-2xl border border-slate-200/80 p-5 shadow-[0_8px_24px_rgba(27,58,107,0.06)]">
+              <div className="sticky top-[150px] bg-white rounded-2xl border border-slate-200/80 p-5 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
                 <div className="text-[10px] uppercase tracking-[0.16em] font-bold mb-4" style={{ color: ACCENT }}>Anteprima tecnica</div>
                 <ShutterPreview state={state} />
               </div>
@@ -1021,7 +1068,7 @@ function ConfiguratorePage({ initialTipo, hasPreselect }: { initialTipo: TipoCon
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-mono font-bold text-sm" style={{ color: NAVY }}>{acc.codice}</span>
                         <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
-                          style={{ background: 'rgba(27,58,107,0.08)', color: NAVY }}>× {acc.quantita}</span>
+                          style={{ background: 'rgba(0,0,0,0.05)', color: NAVY }}>× {acc.quantita}</span>
                       </div>
                       <p className="text-xs mt-0.5 text-slate-500 leading-snug">{acc.descrizione}</p>
                     </div>
@@ -1033,12 +1080,26 @@ function ConfiguratorePage({ initialTipo, hasPreselect }: { initialTipo: TipoCon
             <p className="mt-4 text-[12px] text-slate-400">
               * Le quantità sono calcolate in base alle regole di compatibilità Alsistem. Valori indicativi da verificare con il listino ufficiale.
             </p>
+
+            {/* Nome elemento */}
+            <div className="mt-6 pt-6 border-t border-slate-100">
+              <label className="block text-[11px] uppercase tracking-[0.14em] font-bold text-slate-400 mb-2">
+                {editId ? 'Aggiorna nome elemento' : 'Nome elemento'}
+              </label>
+              <input
+                type="text"
+                value={nomeElemento}
+                onChange={e => setNomeElemento(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && isConfigComplete && salvaElemento()}
+                placeholder={editId ? 'Nome elemento...' : 'es. Finestra camera, Porta ingresso, Soggiorno sx…'}
+                className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-slate-400 transition-colors bg-white"
+              />
+            </div>
           </div>
         </div>
       )
     }
 
-    // STEP 4 — Lista materiali
     if (step === 4) {
       return (
         <div>
@@ -1046,6 +1107,11 @@ function ConfiguratorePage({ initialTipo, hasPreselect }: { initialTipo: TipoCon
             <div>
               <div className="text-[11px] uppercase tracking-[0.2em] font-bold" style={{ color: ACCENT }}>05 — Lista materiali</div>
               <h2 className="mt-3 text-[40px] sm:text-[48px] leading-[1.02] font-bold tracking-[-0.025em] text-slate-900">Distinta tecnica</h2>
+              {editId && (
+                <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold" style={{ background: 'rgba(167,0,0,0.07)', color: ACCENT }}>
+                  Modalità modifica
+                </div>
+              )}
             </div>
             <div className="text-right">
               <div className="text-[11px] text-slate-400">N° preventivo</div>
@@ -1053,62 +1119,8 @@ function ConfiguratorePage({ initialTipo, hasPreselect }: { initialTipo: TipoCon
             </div>
           </div>
 
-          {/* Barra export — nascosta in stampa */}
-          <div className="no-print flex items-center gap-2 flex-wrap mb-8 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50">
-            <span className="text-[11px] uppercase tracking-[0.14em] font-bold text-slate-400 mr-2">Esporta</span>
-
-            <button
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:-translate-y-px"
-              style={{ background: '#fff', border: '1px solid #DDE2EA', color: NAVY }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M9 21h6v-7H9v7z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Stampa / PDF
-            </button>
-
-            <button
-              onClick={exportCSV}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:-translate-y-px"
-              style={{ background: '#fff', border: '1px solid #DDE2EA', color: NAVY }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Scarica CSV
-            </button>
-
-            <button
-              onClick={copyClipboard}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:-translate-y-px"
-              style={{
-                background: copied ? '#F0FDF4' : '#fff',
-                border: copied ? '1px solid #86EFAC' : '1px solid #DDE2EA',
-                color: copied ? '#16A34A' : NAVY,
-              }}
-            >
-              {copied ? (
-                <>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  Copiato!
-                </>
-              ) : (
-                <>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.8" />
-                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                  </svg>
-                  Copia TSV
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* config box */}
-          <div className="rounded-xl p-5 mb-8 flex flex-wrap gap-6" style={{ background: 'rgba(27,58,107,0.04)', border: '1px solid #E5E9F0' }}>
+          {/* Config summary strip */}
+          <div className="rounded-xl p-4 mb-5 flex flex-wrap gap-5" style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid #E3E3E3' }}>
             {[
               { label: 'Tipologia', value: tipo.name },
               { label: 'Telaio', value: state.profili.telaio ?? '—' },
@@ -1116,101 +1128,106 @@ function ConfiguratorePage({ initialTipo, hasPreselect }: { initialTipo: TipoCon
               { label: 'Ovalina', value: state.profili.ovalina ?? '—' },
               { label: 'Dimensioni', value: `${state.dimensioni.larghezza} × ${state.dimensioni.altezza} mm` },
               { label: 'N. ante', value: String(state.dimensioni.ante) },
+              { label: 'Peso totale', value: `${bom.peso_totale_kg.toFixed(2)} kg`, accent: true },
             ].map(f => (
               <div key={f.label}>
                 <div className="text-[11px] text-slate-400">{f.label}</div>
-                <div className="font-mono font-bold text-sm" style={{ color: NAVY }}>{f.value}</div>
+                <div className="font-mono font-bold text-sm" style={{ color: (f as { accent?: boolean }).accent ? ACCENT : NAVY }}>{f.value}</div>
               </div>
             ))}
-            <div>
-              <div className="text-[11px] text-slate-400">Peso totale</div>
-              <div className="font-mono font-bold text-sm" style={{ color: ACCENT }}>{bom.peso_totale_kg.toFixed(2)} kg</div>
-            </div>
           </div>
 
-          {/* Profili */}
-          <h3 className="font-bold text-[12px] uppercase tracking-[0.12em] text-slate-400 mb-3">Profili in alluminio</h3>
-          <div className="rounded-xl border border-slate-200 overflow-hidden mb-8">
+          {/* Export bar */}
+          <div className="no-print flex items-center gap-2 flex-wrap mb-5 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50">
+            <span className="text-[11px] uppercase tracking-[0.14em] font-bold text-slate-400 mr-2">Esporta</span>
+            <button onClick={() => window.print()} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:-translate-y-px" style={{ background: '#fff', border: '1px solid #E3E3E3', color: NAVY }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M9 21h6v-7H9v7z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              Stampa / PDF
+            </button>
+            <button onClick={exportCSV} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:-translate-y-px" style={{ background: '#fff', border: '1px solid #E3E3E3', color: NAVY }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              Scarica CSV
+            </button>
+            <button onClick={copyClipboard} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:-translate-y-px"
+              style={{ background: copied ? '#F0FDF4' : '#fff', border: copied ? '1px solid #86EFAC' : '1px solid #E3E3E3', color: copied ? '#16A34A' : NAVY }}>
+              {copied
+                ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>Copiato!</>
+                : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.8" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>Copia TSV</>}
+            </button>
+          </div>
+
+          {/* BOM profili */}
+          <div className="rounded-xl border border-slate-200 overflow-hidden mb-4">
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ background: NAVY, color: '#fff' }}>
-                  <th className="text-left px-4 py-3 font-semibold">#</th>
-                  <th className="text-left px-4 py-3 font-semibold">Codice</th>
-                  <th className="text-left px-4 py-3 font-semibold hidden md:table-cell print-show-cell">Descrizione</th>
-                  <th className="text-right px-4 py-3 font-semibold">Taglio</th>
-                  <th className="text-right px-4 py-3 font-semibold">Q.tà</th>
-                  <th className="text-right px-4 py-3 font-semibold">Peso</th>
+                  <th className="text-left px-4 py-2.5 font-semibold w-8">#</th>
+                  <th className="text-left px-4 py-2.5 font-semibold">Codice</th>
+                  <th className="text-left px-4 py-2.5 font-semibold hidden md:table-cell print-show-cell">Descrizione</th>
+                  <th className="text-right px-4 py-2.5 font-semibold">Taglio</th>
+                  <th className="text-right px-4 py-2.5 font-semibold">Q.tà</th>
+                  <th className="text-right px-4 py-2.5 font-semibold">Peso</th>
                 </tr>
               </thead>
               <tbody>
                 {bom.profili.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-slate-400 text-sm">
-                      Nessun profilo calcolato — verifica la selezione negli step precedenti
-                    </td>
-                  </tr>
+                  <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400 text-sm">Nessun profilo calcolato</td></tr>
                 ) : bom.profili.map((r, i) => (
-                  <tr key={`${r.codice}-${r.taglio_mm}`} style={{ background: i % 2 === 0 ? '#fff' : '#FAFBFD', borderTop: '1px solid #E5E9F0' }}>
-                    <td className="px-4 py-3 text-xs text-slate-400">{i + 1}</td>
-                    <td className="px-4 py-3"><span className="font-mono font-bold" style={{ color: NAVY }}>{r.codice}</span></td>
-                    <td className="px-4 py-3 hidden md:table-cell print-show-cell text-xs text-slate-500">{r.descrizione}</td>
-                    <td className="px-4 py-3 text-right font-mono font-semibold text-slate-800">{r.taglio_mm} mm</td>
-                    <td className="px-4 py-3 text-right">
-                      <span className="font-bold px-2 py-0.5 rounded text-xs tabular-nums"
-                        style={{ background: 'rgba(27,58,107,0.08)', color: NAVY }}>× {r.quantita}</span>
+                  <tr key={`${r.codice}-${r.taglio_mm}`} style={{ background: i % 2 === 0 ? '#fff' : '#FAFBFD', borderTop: '1px solid #E3E3E3' }}>
+                    <td className="px-4 py-2.5 text-xs text-slate-400">{i + 1}</td>
+                    <td className="px-4 py-2.5"><span className="font-mono font-bold" style={{ color: NAVY }}>{r.codice}</span></td>
+                    <td className="px-4 py-2.5 hidden md:table-cell print-show-cell text-xs text-slate-500">{r.descrizione}</td>
+                    <td className="px-4 py-2.5 text-right font-mono font-semibold text-slate-800">{r.taglio_mm} mm</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <span className="font-bold px-2 py-0.5 rounded text-xs tabular-nums" style={{ background: 'rgba(0,0,0,0.05)', color: NAVY }}>× {r.quantita}</span>
                     </td>
-                    <td className="px-4 py-3 text-right text-xs font-semibold text-slate-500">{r.peso_kg} kg</td>
+                    <td className="px-4 py-2.5 text-right text-xs font-semibold text-slate-500">{r.peso_kg} kg</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr style={{ background: 'rgba(27,58,107,0.06)', borderTop: '2px solid #E5E9F0' }}>
-                  <td colSpan={5} className="px-4 py-3 text-right font-bold text-sm" style={{ color: NAVY }}>Peso totale profili</td>
-                  <td className="px-4 py-3 text-right font-bold" style={{ color: ACCENT }}>{bom.peso_totale_kg} kg</td>
+                <tr style={{ background: 'rgba(0,0,0,0.04)', borderTop: '2px solid #E3E3E3' }}>
+                  <td colSpan={5} className="px-4 py-2.5 text-right font-bold text-sm" style={{ color: NAVY }}>Peso totale profili</td>
+                  <td className="px-4 py-2.5 text-right font-bold" style={{ color: ACCENT }}>{bom.peso_totale_kg} kg</td>
                 </tr>
               </tfoot>
             </table>
           </div>
 
-          {/* Accessori */}
+          {/* BOM accessori */}
           {bom.accessori.length > 0 && (
-            <>
-              <h3 className="font-bold text-[12px] uppercase tracking-[0.12em] text-slate-400 mb-3">Accessori e componenti</h3>
-              <div className="rounded-xl border border-slate-200 overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr style={{ background: '#F8FAFC' }}>
-                      <th className="text-left px-4 py-3 font-semibold border-b border-slate-200 text-slate-700">#</th>
-                      <th className="text-left px-4 py-3 font-semibold border-b border-slate-200 text-slate-700">Codice</th>
-                      <th className="text-left px-4 py-3 font-semibold border-b border-slate-200 text-slate-700 hidden md:table-cell print-show-cell">Descrizione</th>
-                      <th className="text-right px-4 py-3 font-semibold border-b border-slate-200 text-slate-700">Q.tà</th>
+            <div className="rounded-xl border border-slate-200 overflow-hidden mb-5">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ background: '#F8FAFC' }}>
+                    <th className="text-left px-4 py-2.5 font-semibold border-b border-slate-200 text-slate-600 w-8">#</th>
+                    <th className="text-left px-4 py-2.5 font-semibold border-b border-slate-200 text-slate-600">Codice</th>
+                    <th className="text-left px-4 py-2.5 font-semibold border-b border-slate-200 text-slate-600 hidden md:table-cell print-show-cell">Descrizione</th>
+                    <th className="text-right px-4 py-2.5 font-semibold border-b border-slate-200 text-slate-600">Q.tà</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bom.accessori.map((a, i) => (
+                    <tr key={a.codice} style={{ background: i % 2 === 0 ? '#fff' : '#FAFBFD', borderTop: '1px solid #E3E3E3' }}>
+                      <td className="px-4 py-2.5 text-xs text-slate-400">{i + 1}</td>
+                      <td className="px-4 py-2.5"><span className="font-mono font-bold text-sm" style={{ color: NAVY }}>{a.codice}</span></td>
+                      <td className="px-4 py-2.5 hidden md:table-cell print-show-cell text-xs text-slate-500">{a.descrizione}</td>
+                      <td className="px-4 py-2.5 text-right font-bold tabular-nums" style={{ color: NAVY }}>{a.quantita}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {bom.accessori.map((a, i) => (
-                      <tr key={a.codice} style={{ background: i % 2 === 0 ? '#fff' : '#FAFBFD', borderTop: '1px solid #E5E9F0' }}>
-                        <td className="px-4 py-3 text-xs text-slate-400">{i + 1}</td>
-                        <td className="px-4 py-3"><span className="font-mono font-bold text-sm" style={{ color: NAVY }}>{a.codice}</span></td>
-                        <td className="px-4 py-3 hidden md:table-cell print-show-cell text-xs text-slate-500">{a.descrizione}</td>
-                        <td className="px-4 py-3 text-right font-bold tabular-nums" style={{ color: NAVY }}>{a.quantita}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
-          <p className="mt-5 text-[12px] text-slate-400">
-            * Misure di taglio calcolate sulle formule della distinta tecnica Alsistem Global 45. Quantità accessori indicative.
-          </p>
+          <p className="text-[12px] text-slate-400">* Misure di taglio calcolate sulle formule della distinta tecnica Alsistem Global 45. Quantità accessori indicative.</p>
         </div>
       )
     }
   }
 
   return (
-    <div style={{ background: '#F4F6F9', minHeight: '100vh' }}>
+    <div style={{ background: '#EEEEEE', minHeight: '100vh' }}>
       {/* Stepper bar */}
       <div className="no-print bg-white border-b border-slate-200/80 sticky top-[68px] z-30">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-3">
@@ -1222,38 +1239,35 @@ function ConfiguratorePage({ initialTipo, hasPreselect }: { initialTipo: TipoCon
       <main className="max-w-[1400px] mx-auto px-6 lg:px-10 py-10 lg:py-14 pb-24 lg:pb-14">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 lg:gap-10">
           <div className="min-w-0">
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-8 shadow-[0_1px_0_rgba(0,0,0,0.02),0_8px_24px_rgba(27,58,107,0.04)] overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-8 shadow-[0_1px_0_rgba(0,0,0,0.02),0_8px_24px_rgba(0,0,0,0.03)]">
               <div key={step} className={direction === 'forward' ? 'step-enter-forward' : 'step-enter-backward'}>
                 {renderStep()}
               </div>
             </div>
 
             {/* Nav */}
-            {step > 0 && step < 4 && (
+            {step < 4 && (
               <div className="no-print mt-10 pt-6 border-t border-slate-200/70 flex items-center justify-between gap-4">
-                <Btn kind="ghost" onClick={goBack}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  Indietro
-                </Btn>
+                {step > 0 ? (
+                  <Btn kind="ghost" onClick={goBack}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    Indietro
+                  </Btn>
+                ) : <div />}
                 <div className="hidden sm:block text-[11px] uppercase tracking-[0.14em] font-bold text-slate-400 tabular-nums">
                   Step {String(step + 1).padStart(2, '0')} di {String(STEPS.length).padStart(2, '0')}
                 </div>
-                <Btn kind="primary" onClick={advance} disabled={!canAdvance}>
-                  {step === 3 ? 'Calcola lista materiali' : 'Continua'}
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                </Btn>
-              </div>
-            )}
-            {step === 4 && (
-              <div className="no-print mt-10 pt-6 border-t border-slate-200/70 flex items-center justify-between gap-4">
-                <Btn kind="ghost" onClick={() => { setDirection('backward'); setStep(3) }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  Modifica accessori
-                </Btn>
-                <button onClick={() => { setState(DEFAULT_STATE); setDirection('backward'); setStep(0); setMaxReached(0) }}
-                  className="text-[12px] font-semibold text-slate-500 hover:text-slate-900 underline-offset-2 hover:underline">
-                  Nuova configurazione
-                </button>
+                {step < 3 ? (
+                  <Btn kind="primary" onClick={advance} disabled={!canAdvance}>
+                    Continua
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  </Btn>
+                ) : (
+                  <Btn kind="primary" onClick={salvaElemento} disabled={!isConfigComplete}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    {editId ? 'Aggiorna elemento' : 'Salva elemento'}
+                  </Btn>
+                )}
               </div>
             )}
 

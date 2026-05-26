@@ -155,8 +155,25 @@ export function generaListaMateriali(cfg: ConfigurazioneUtente): ListaMateriali 
   const ovalinaCodice = cfg.profili.ovalina?.codice ?? ''
   const nOvaline = ovalinaCodice ? calcolaNOvaline(ovalinaCodice, H) : 0
 
-  // Select the correct distinta key
-  const distinte: Record<string, Record<string, string>> = config.distinte_taglio ?? {}
+  // Select the correct distinta key — fall back to a donor config when distinte_taglio is empty
+  let distinte: Record<string, Record<string, string>> = config.distinte_taglio ?? {}
+  let effectiveConfig: ConfigRaw = config
+
+  if (Object.keys(distinte).length === 0) {
+    const allConfigs = getConfigurazioniTipo() as ConfigRaw[]
+    const hasTelaio = cfg.profili.telaio != null
+    const donorTipi = hasTelaio
+      ? ['con_telaio', 'con_telaio_orientabile', 'con_telaio_maggiorato']
+      : ['senza_telaio_rustica', 'senza_telaio']
+    const donor = allConfigs.find(
+      c => donorTipi.includes(c.tipo) && Object.keys(c.distinte_taglio ?? {}).length > 0
+    )
+    if (donor) {
+      distinte = donor.distinte_taglio
+      effectiveConfig = donor
+    }
+  }
+
   let distinteKey = num_ante === 1 ? '1_anta' : '2_ante'
   if (!distinte[distinteKey] && Object.keys(distinte).length > 0) {
     distinteKey = Object.keys(distinte)[0]
@@ -176,22 +193,24 @@ export function generaListaMateriali(cfg: ConfigurazioneUtente): ListaMateriali 
       }
     }
 
-    // Use user's selection if it overrides the default
-    const profiloSelezionato = (
-      cfg.profili.telaio?.codice === codice ? cfg.profili.telaio :
-      cfg.profili.anta?.codice === codice ? cfg.profili.anta :
-      cfg.profili.ovalina?.codice === codice ? cfg.profili.ovalina :
-      cfg.profili.fascia?.codice === codice ? cfg.profili.fascia :
-      cfg.profili.riporto_centrale?.codice === codice ? cfg.profili.riporto_centrale :
-      null
-    ) ?? getProfiloByCodice(codice)
+    // Use role-based matching so user's selected profili override the default ones
+    const ruolo = ruoloProfilo(codice, effectiveConfig)
+    const profiloSelezionato = (() => {
+      switch (ruolo) {
+        case 'telaio': return cfg.profili.telaio ?? getProfiloByCodice(codice)
+        case 'anta': return cfg.profili.anta ?? getProfiloByCodice(codice)
+        case 'ovalina': return cfg.profili.ovalina ?? getProfiloByCodice(codice)
+        case 'fascia': return cfg.profili.fascia ?? getProfiloByCodice(codice)
+        case 'riporto': return cfg.profili.riporto_centrale ?? getProfiloByCodice(codice)
+        default: return getProfiloByCodice(codice)
+      }
+    })()
 
     if (!profiloSelezionato) continue
 
     const taglio = evalFormula(formula, L, H)
     if (taglio <= 0) continue
 
-    const ruolo = ruoloProfilo(codice, config)
     const quantita = calcolaQuantitaProfilo(ruolo, num_ante, nOvaline)
     const pesoKg = ((profiloSelezionato.peso_gr_m ?? 0) * (taglio / 1000) * quantita) / 1000
 
@@ -221,7 +240,11 @@ export function generaListaMateriali(cfg: ConfigurazioneUtente): ListaMateriali 
 
   // ─── Accessori ──────────────────────────────────────────────────────────────
 
-  const accessoriRichiesti: Record<string, string> = config.accessori_richiesti ?? {}
+  const accessoriRichiesti: Record<string, string> = (
+    Object.keys(config.accessori_richiesti ?? {}).length > 0
+      ? config.accessori_richiesti
+      : effectiveConfig.accessori_richiesti
+  ) ?? {}
   const righeAccessori: RigaAccessorio[] = []
   const seen = new Set<string>()
 

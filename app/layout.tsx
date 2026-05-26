@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import Link from 'next/link'
+import Image from 'next/image'
 import './globals.css'
 import catalogoData from '@/FresiAlluminio/catalogo-global45.json'
+import CartBadge from '@/app/components/CartBadge'
 
 const inter = Inter({
   variable: '--font-sans',
@@ -11,7 +13,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Configuratore Global 45 — Fresi Alluminio',
+  title: 'Configuratore Global 45 — Fresia Alluminio',
   description:
     'Configuratore professionale per sistemi in alluminio Global 45 di Alsistem. Seleziona profili, calcola distinte di taglio e genera la lista materiali.',
 }
@@ -32,43 +34,50 @@ export default function RootLayout({
       >
         {/* Header */}
         <header
-          className="no-print sticky top-0 z-50 border-b"
-          style={{
-            backgroundColor: 'var(--brand-primary)',
-            borderColor: 'var(--brand-primary-hover)',
-          }}
+          className="no-print sticky top-0 z-50 border-b bg-white"
+          style={{ borderColor: '#E3E3E3', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
         >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
             <div className="flex items-center justify-between h-16">
               {/* Logo */}
-              <Link href="/" className="flex flex-col leading-tight">
-                <span
-                  className="font-bold tracking-wide text-lg"
-                  style={{ color: '#FFFFFF', letterSpacing: '0.04em' }}
-                >
-                  FRESI ALLUMINIO
-                </span>
-                <span
-                  className="text-xs font-medium"
-                  style={{ color: 'rgba(255,255,255,0.65)', letterSpacing: '0.06em' }}
-                >
-                  Configuratore Global 45
-                </span>
+              <Link href="/" className="flex items-center gap-3 leading-tight">
+                <Image
+                  src="/logo_fresia.png"
+                  alt="Fresia Alluminio"
+                  height={40}
+                  width={120}
+                  className="h-10 w-auto object-contain"
+                  priority
+                />
+                <div className="flex flex-col">
+                  <span
+                    className="font-bold tracking-wide text-lg"
+                    style={{ color: '#A70000', letterSpacing: '0.04em' }}
+                  >
+                    FRESIA ALLUMINIO
+                  </span>
+                  <span
+                    className="text-xs font-medium"
+                    style={{ color: '#999999', letterSpacing: '0.06em' }}
+                  >
+                    Configuratore Global 45
+                  </span>
+                </div>
               </Link>
 
               {/* Nav */}
               <nav className="flex items-center gap-1">
                 <Link
                   href="/catalogo"
-                  className="px-4 py-2 rounded-md text-sm font-medium transition-colors hover:bg-white/10"
-                  style={{ color: 'rgba(255,255,255,0.8)' }}
+                  className="nav-link px-4 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Catalogo
                 </Link>
+                <CartBadge />
                 <Link
                   href="/configuratore"
-                  className="ml-2 px-4 py-2 rounded-md text-sm font-semibold transition-colors hover:opacity-90"
-                  style={{ backgroundColor: 'var(--brand-accent)', color: '#FFFFFF' }}
+                  className="ml-2 px-4 py-2 rounded-md text-sm font-semibold text-white transition-colors hover:opacity-90"
+                  style={{ backgroundColor: '#A70000' }}
                 >
                   Configura
                 </Link>
@@ -117,7 +126,7 @@ export default function RootLayout({
             {/* Riga inferiore: copyright + disclaimer */}
             <div className="flex flex-wrap items-start justify-between gap-3 pt-4">
               <p className="text-xs" style={{ color: 'var(--brand-text-muted)' }}>
-                &copy; {new Date().getFullYear()} Fresi Alluminio S.p.A. Tutti i diritti riservati.
+                &copy; {new Date().getFullYear()} Fresia Alluminio S.p.A. Tutti i diritti riservati.
               </p>
               <p className="text-xs text-right max-w-md leading-relaxed" style={{ color: 'var(--brand-text-muted)' }}>
                 * {catalogoData.meta.note}

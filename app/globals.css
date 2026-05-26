@@ -82,16 +82,16 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 
-  /* Brand Fresi Alluminio */
-  --brand-primary: #1B3A6B;
-  --brand-primary-hover: #152d54;
-  --brand-accent: #E8600E;
-  --brand-accent-hover: #c94f0a;
-  --brand-bg: #F4F6F9;
+  /* Brand Fresia Alluminio */
+  --brand-primary: #A70000;
+  --brand-primary-hover: #8a0000;
+  --brand-accent: #A70000;
+  --brand-accent-hover: #8a0000;
+  --brand-bg: #EEEEEE;
   --brand-card: #FFFFFF;
-  --brand-border: #DDE2EA;
-  --brand-text: #111827;
-  --brand-text-muted: #6B7280;
+  --brand-border: #E3E3E3;
+  --brand-text: #333333;
+  --brand-text-muted: #666666;
   --brand-success: #16A34A;
   --brand-warning: #D97706;
   --brand-error: #DC2626;
@@ -144,6 +144,13 @@
 }
 
 @layer components {
+  .nav-link {
+    color: #555555;
+  }
+  .nav-link:hover {
+    color: #A70000;
+  }
+
   .btn-primary {
     display: inline-flex;
     align-items: center;
@@ -162,7 +169,7 @@
   }
   .btn-primary:hover {
     background-color: var(--brand-accent-hover);
-    box-shadow: 0 2px 8px rgba(232, 96, 14, 0.35);
+    box-shadow: 0 2px 8px rgba(167, 0, 0, 0.35);
   }
   .btn-primary:focus-visible {
     outline: 2px solid var(--brand-accent);
@@ -190,7 +197,7 @@
     text-decoration: none;
   }
   .btn-secondary:hover {
-    background-color: rgba(27, 58, 107, 0.06);
+    background-color: rgba(0, 0, 0, 0.05);
   }
   .btn-secondary:focus-visible {
     outline: 2px solid var(--brand-primary);
