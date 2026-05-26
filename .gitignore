@@ -3,6 +3,7 @@
 
 # Cataloghi PDF (file binari pesanti — tenere fuori da git)
 *.pdf
+!public/catalogo-global45.pdf
 
 # Configurazione agenti AI locale
 .claude/
